@@ -1,0 +1,189 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day Counter V5</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f0dc;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      padding: 1rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    #days-left {
+      margin: 0.5rem 0;
+      font-size: 1.2rem;
+    }
+    #calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin: 1rem;
+      width: 95%;
+      max-width: 600px;
+    }
+    .day {
+      background: #fffef6;
+      border: 1px solid #d3c9a1;
+      border-radius: 12px;
+      min-height: 70px;
+      text-align: center;
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .today {
+      border: 2px solid #d33;
+      background: #ffeaea;
+    }
+    .red-btn {
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 6px;
+      margin-top: 4px;
+      cursor: pointer;
+    }
+    .complete-btn {
+      background: green;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 6px;
+      margin-top: 4px;
+      cursor: pointer;
+    }
+    #target-screen {
+      position: fixed;
+      top: 0; left: 0; right:0; bottom:0;
+      background: #f5f0dc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    #target-screen input {
+      padding: 8px;
+      margin: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="target-screen">
+    <h2>Set your target date</h2>
+    <input type="date" id="target-date" />
+    <button onclick="setTarget()">Save Target</button>
+  </div>
+  <header>📅 Day Counter V5</header>
+  <div id="days-left"></div>
+  <div id="calendar"></div>
+<script>
+let targetDate = localStorage.getItem("targetDate");
+let clickCounts = JSON.parse(localStorage.getItem("clickCounts") || "{}");
+let completedDays = JSON.parse(localStorage.getItem("completedDays") || "[]");
+
+function setTarget(){
+  const dateInput = document.getElementById("target-date").value;
+  if(dateInput){
+    targetDate = dateInput;
+    localStorage.setItem("targetDate", targetDate);
+    document.getElementById("target-screen").style.display = "none";
+    render();
+  }
+}
+
+function daysLeft(){
+  if(!targetDate) return "";
+  let today = new Date();
+  let tDate = new Date(targetDate);
+  let diff = Math.ceil((tDate - today)/(1000*60*60*24));
+  return diff + " days left";
+}
+
+function render(){
+  document.getElementById("days-left").textContent = daysLeft();
+  let cal = document.getElementById("calendar");
+  cal.innerHTML = "";
+  let today = new Date();
+  let year = today.getFullYear();
+  let month = today.getMonth();
+  let firstDay = new Date(year, month, 1).getDay();
+  let daysInMonth = new Date(year, month+1, 0).getDate();
+
+  for(let i=0;i<firstDay;i++){
+    let empty = document.createElement("div");
+    cal.appendChild(empty);
+  }
+
+  for(let d=1; d<=daysInMonth; d++){
+    let dateKey = year+"-"+(month+1)+"-"+d;
+    let box = document.createElement("div");
+    box.className = "day";
+    if(d === today.getDate()) box.classList.add("today");
+    let label = document.createElement("div");
+    label.textContent = d;
+    box.appendChild(label);
+
+    if(d === today.getDate()){
+      let btn = document.createElement("button");
+      btn.className = "red-btn";
+      btn.textContent = " ";
+      btn.onclick = ()=>{
+        clickCounts[dateKey] = (clickCounts[dateKey]||0)+1;
+        localStorage.setItem("clickCounts", JSON.stringify(clickCounts));
+        render();
+      };
+      box.appendChild(btn);
+    }
+
+    if(clickCounts[dateKey]){
+      let c = document.createElement("div");
+      c.textContent = clickCounts[dateKey];
+      box.appendChild(c);
+    }
+
+    let hour = today.getHours();
+    if(d === today.getDate() && hour >= 22){
+      let compBtn = document.createElement("button");
+      compBtn.className = "complete-btn";
+      compBtn.textContent = "Mark Complete";
+      compBtn.onclick = ()=>{
+        if(!completedDays.includes(dateKey)){
+          completedDays.push(dateKey);
+          localStorage.setItem("completedDays", JSON.stringify(completedDays));
+          render();
+        }
+      };
+      box.appendChild(compBtn);
+    }
+    if(completedDays.includes(dateKey)){
+      let mark = document.createElement("div");
+      mark.textContent = "✔";
+      box.appendChild(mark);
+    }
+    cal.appendChild(box);
+  }
+}
+
+if(targetDate){
+  document.getElementById("target-screen").style.display = "none";
+  render();
+}
+</script>
+</body>
+</html>
